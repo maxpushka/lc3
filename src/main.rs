@@ -20,29 +20,7 @@ fn main() {
         let op = instr >> 12;
         match OP::try_from(op).expect("unknown opcode") {
             OP::BR => todo!(),
-            OP::ADD => {
-                // Standard mode:
-                // 0001 xxx xxx 0 00 xxx
-                // ADD  DR  SR1      SR2
-
-                // Immediate mode:
-                // 0001 xxx xxx 1 xxxxx
-                // ADD  DR  SR1   imm5
-
-                let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
-                let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
-                let imm_flag: u16 = (instr >> 5) & 0x1; // whether we are in immediate mode
-
-                if imm_flag != 0 {
-                    let imm5: u16 = sign_extend(instr & 0x1F, 5);
-                    reg[r0 as usize] = reg[r1 as usize] + imm5;
-                } else {
-                    let r2: u16 = instr & 0x7;
-                    reg[r0 as usize] = reg[r1 as usize] + reg[r2 as usize];
-                }
-
-                update_flags(&mut reg, r0);
-            }
+            OP::ADD => do_add(instr, &mut reg),
             OP::LD => todo!(),
             OP::ST => todo!(),
             OP::JSR => todo!(),
@@ -51,7 +29,7 @@ fn main() {
             OP::STR => todo!(),
             OP::RTI => todo!(),
             OP::NOT => todo!(),
-            OP::LDI => todo!(),
+            OP::LDI => do_ldi(instr, &mut reg),
             OP::STI => todo!(),
             OP::JMP => todo!(),
             OP::RES => todo!(),
@@ -156,4 +134,60 @@ fn sign_extend(mut x: u16, bit_count: i32) -> u16 {
         x |= 0xFFFF << bit_count;
     }
     x
+}
+
+// # Assembler formats
+//
+// ADD DR, SR1, SR2,
+// ADD DR, SR1, imm5
+//
+// # Examples
+//
+// ADD R2, R3, R4 ; R2 <- R3 + R4
+// ADD R2, R3, #7 ; R2 <- R3 + 7
+//
+// # Encodings
+//
+// Register mode:
+// 0001 xxx xxx 0 00 xxx
+// ADD  DR  SR1      SR2
+//
+// Immediate mode:
+// 0001 xxx xxx 1 xxxxx
+// ADD  DR  SR1   imm5
+fn do_add(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
+    let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
+    let imm_flag: u16 = (instr >> 5) & 0x1; // whether we are in immediate mode
+
+    if imm_flag != 0 {
+        let imm5: u16 = sign_extend(instr & 0x1F, 5);
+        reg[r0 as usize] = reg[r1 as usize] + imm5;
+    } else {
+        let r2: u16 = instr & 0x7;
+        reg[r0 as usize] = reg[r1 as usize] + reg[r2 as usize];
+    }
+
+    update_flags(&mut reg, r0);
+}
+
+// # Assembler formats
+//
+// LDI DR, LABEL
+//
+// # Examples
+//
+// LDI R4, ONEMORE ; R4 <- mem[mem[ONEMORE]]
+//
+// # Encodings
+//
+// 1010 xxx xxxxxxxxx
+//      DR  PCoffset9
+fn do_ldi(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 4) & 0x7; // destination register (DR)
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    // add pc_offset to the current PC, look at that memory location to get the final address
+    reg[r0 as usize] = mem_read(mem_read(reg[R::PC as usize]) + pc_offset);
+    update_flags(&mut reg, r0);
 }
