@@ -22,17 +22,17 @@ fn main() {
             OP::BR => do_br(instr, &mut reg),
             OP::ADD => do_add(instr, &mut reg),
             OP::LD => do_ld(instr, &mut reg),
-            OP::ST => todo!(),
+            OP::ST => do_st(instr, &mut reg),
             OP::JSR => do_jsr(instr, &mut reg),
             OP::AND => do_and(instr, &mut reg),
             OP::LDR => do_ldr(instr, &mut reg),
             OP::STR => todo!(),
-            OP::RTI => todo!(),
+            OP::RTI => return, // not simulated
             OP::NOT => do_not(instr, &mut reg),
             OP::LDI => do_ldi(instr, &mut reg),
             OP::STI => todo!(),
             OP::JMP => do_jmp(instr, &mut reg),
-            OP::RES => todo!(),
+            OP::RES => return,
             OP::LEA => do_lea(instr, &mut reg),
             OP::TRAP => todo!(),
         }
@@ -45,7 +45,7 @@ const MEMORY_MAX: usize = 1 << 16;
 
 // Registers
 #[repr(usize)]
-// #[allow(dead_code)]
+#[allow(dead_code)]
 enum R {
     R0 = 0,
     R1,
@@ -71,7 +71,7 @@ enum OP {
     AND,    /* bitwise and */
     LDR,    /* load register */
     STR,    /* store register */
-    RTI,    /* unused */
+    RTI,    /* return from interrupt */
     NOT,    /* bitwise not */
     LDI,    /* load indirect */
     STI,    /* store indirect */
@@ -118,6 +118,8 @@ enum FL {
 fn mem_read(address: u16) -> u16 {
     0 // TODO
 }
+
+fn mem_write(reg: &mut [u16; R::COUNT as usize], address: u16, value: u16) {}
 
 fn update_flags(reg: &mut [u16; R::COUNT as usize], r: u16) {
     if reg[r as usize] == 0 {
@@ -392,4 +394,23 @@ fn do_lea(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
 
     reg[r0 as usize] = reg[R::PC as usize] + pc_offset;
     update_flags(reg, r0);
+}
+
+// # Assembler formats
+//
+// ST SR, LABEL
+//
+// # Examples
+//
+// ST R4, HERE ; mem[HERE] <- R4
+//
+// # Encodings
+//
+// 0011 xxx xxxxxxxxx
+//      SR  PCoffset9
+fn do_st(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7;
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    mem_write(reg, R::PC as u16 + pc_offset, reg[r0 as usize]);
 }
