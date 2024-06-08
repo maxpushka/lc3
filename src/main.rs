@@ -21,7 +21,7 @@ fn main() {
         match OP::try_from(op).expect("unknown opcode") {
             OP::BR => do_br(instr, &mut reg),
             OP::ADD => do_add(instr, &mut reg),
-            OP::LD => todo!(),
+            OP::LD => do_ld(instr, &mut reg),
             OP::ST => todo!(),
             OP::JSR => do_jsr(instr, &mut reg),
             OP::AND => do_and(instr, &mut reg),
@@ -331,4 +331,24 @@ fn do_jsr(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
         let r1: u16 = (instr >> 6) & 0x7;
         reg[R::PC as usize] = reg[r1 as usize];
     }
+}
+
+// # Assembler formats
+//
+// LD DR, LABEL
+//
+// # Examples
+//
+// LD R4, VALUE ; R4 <- mem[VALUE]
+//
+// # Encodings
+//
+// 0010 xxx xxxxxxxxx
+//      DR  PCoffset9
+fn do_ld(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7;
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    reg[r0 as usize] = mem_read(reg[R::PC as usize] + pc_offset);
+    update_flags(reg, r0);
 }
