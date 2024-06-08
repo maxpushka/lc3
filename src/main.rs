@@ -33,7 +33,7 @@ fn main() {
             OP::STI => todo!(),
             OP::JMP => do_jmp(instr, &mut reg),
             OP::RES => todo!(),
-            OP::LEA => todo!(),
+            OP::LEA => do_lea(instr, &mut reg),
             OP::TRAP => todo!(),
         }
     }
@@ -371,5 +371,25 @@ fn do_ldr(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let offset = sign_extend(instr & 0x3F, 6); // offset6
 
     reg[r0 as usize] = mem_read(reg[r1 as usize] + offset);
+    update_flags(reg, r0);
+}
+
+// # Assembler formats
+//
+// LEA DR, LABEL
+//
+// # Examples
+//
+// LEA R4, TARGET ; R4 <- address of TARGET
+//
+// # Encodings
+//
+// 1110 xxx xxxxxxxxx
+//      DR  PCoffset9
+fn do_lea(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7;
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    reg[r0 as usize] = reg[R::PC as usize] + pc_offset;
     update_flags(reg, r0);
 }
