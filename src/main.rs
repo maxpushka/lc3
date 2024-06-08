@@ -19,7 +19,7 @@ fn main() {
 
         let op = instr >> 12;
         match OP::try_from(op).expect("unknown opcode") {
-            OP::BR => todo!(),
+            OP::BR => do_br(instr, &mut reg),
             OP::ADD => do_add(instr, &mut reg),
             OP::LD => todo!(),
             OP::ST => todo!(),
@@ -246,4 +246,33 @@ fn do_not(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
     reg[r0 as usize] = !reg[r1 as usize];
 
     update_flags(&mut reg, r0);
+}
+
+// # Assembler formats
+//
+// BRn LABEL
+// BRz LABEL
+// BRp LABEL
+// BRzp LABEL
+// BPnp LABEL
+// BRnz LABEL
+// BRnzp LABEL ; same as `BR LABEL`
+// BR LABEL    ; same as `BRnzp LABEL`
+//
+// # Examples
+//
+// BRzp LOOP ; Branch to LOOP if the last result was zero or positive
+// BR   NEXT ; Unconditionally branch to NEXT
+//
+// # Encodings
+//
+// 0000 x x x xxxxxxxxx
+// BR   n z p PCoffset9
+fn do_br(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let cond_flag: u16 = (instr >> 9) & 0x7;
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    if cond_flag & reg[R::COND as usize] != 0 {
+        reg[R::COUNT as usize] += pc_offset;
+    }
 }
