@@ -25,7 +25,7 @@ fn main() {
             OP::ST => todo!(),
             OP::JSR => do_jsr(instr, &mut reg),
             OP::AND => do_and(instr, &mut reg),
-            OP::LDR => todo!(),
+            OP::LDR => do_ldr(instr, &mut reg),
             OP::STR => todo!(),
             OP::RTI => todo!(),
             OP::NOT => do_not(instr, &mut reg),
@@ -350,5 +350,26 @@ fn do_ld(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
     reg[r0 as usize] = mem_read(reg[R::PC as usize] + pc_offset);
+    update_flags(reg, r0);
+}
+
+// # Assembler formats
+//
+// LDR DR, BaseR, offset6
+//
+// # Examples
+//
+// LDR R4, R2, #-5 ; R4 <- mem[R2 - 5]
+//
+// # Encodings
+//
+// 0110 xxx xxx   xxxxxx
+//      DR  BaseR PCoffset6
+fn do_ldr(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7; // DR
+    let r1: u16 = (instr >> 6) & 0x7; // BaseR
+    let offset = sign_extend(instr & 0x3F, 6); // offset6
+
+    reg[r0 as usize] = mem_read(reg[r1 as usize] + offset);
     update_flags(reg, r0);
 }
