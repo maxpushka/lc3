@@ -30,7 +30,7 @@ fn main() {
             OP::RTI => return, // not simulated
             OP::NOT => do_not(instr, &mut reg),
             OP::LDI => do_ldi(instr, &mut reg),
-            OP::STI => todo!(),
+            OP::STI => do_sti(instr, &mut reg),
             OP::JMP => do_jmp(instr, &mut reg),
             OP::RES => return,
             OP::LEA => do_lea(instr, &mut reg),
@@ -412,5 +412,28 @@ fn do_st(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let r0: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
-    mem_write(reg, R::PC as u16 + pc_offset, reg[r0 as usize]);
+    let address = R::PC as u16 + pc_offset;
+    let value = reg[r0 as usize];
+    mem_write(reg, address, value);
+}
+
+// # Assembler formats
+//
+// STI SR, LABEL
+//
+// # Examples
+//
+// STI R4, NOT_HERE ; mem[mem[NOT_HERE]] <- R4
+//
+// # Encodings
+//
+// 1011 xxx xxxxxxxxx
+//      SR  PCoffset9
+fn do_sti(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7;
+    let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
+
+    let address = mem_read(R::PC as u16 + pc_offset);
+    let value = reg[r0 as usize];
+    mem_write(reg, address, value);
 }
