@@ -24,11 +24,11 @@ fn main() {
             OP::LD => todo!(),
             OP::ST => todo!(),
             OP::JSR => todo!(),
-            OP::AND => todo!(),
+            OP::AND => do_and(instr, &mut reg),
             OP::LDR => todo!(),
             OP::STR => todo!(),
             OP::RTI => todo!(),
-            OP::NOT => todo!(),
+            OP::NOT => do_not(instr, &mut reg),
             OP::LDI => do_ldi(instr, &mut reg),
             OP::STI => todo!(),
             OP::JMP => todo!(),
@@ -189,5 +189,61 @@ fn do_ldi(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
 
     // add pc_offset to the current PC, look at that memory location to get the final address
     reg[r0 as usize] = mem_read(mem_read(reg[R::PC as usize]) + pc_offset);
+    update_flags(&mut reg, r0);
+}
+
+// # Assembler formats
+//
+// AND DR, SR1, SR2,
+// AND DR, SR1, imm5
+//
+// # Examples
+//
+// AND R2, R3, R4 ; R2 <- R3 AND R4
+// AND R2, R3, #7 ; R2 <- R3 AND 7
+//
+// # Encodings
+//
+// Register mode:
+// 0001 xxx xxx 0 00 xxx
+// AND  DR  SR1      SR2
+//
+// Immediate mode:
+// 0001 xxx xxx 1 xxxxx
+// AND  DR  SR1   imm5
+fn do_and(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
+    let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
+    let imm_flag: u16 = (instr >> 5) & 0x1; // whether we are in immediate mode
+
+    if imm_flag != 0 {
+        let imm5: u16 = sign_extend(instr & 0x1F, 5);
+        reg[r0 as usize] = reg[r1 as usize] & imm5;
+    } else {
+        let r2: u16 = instr & 0x7;
+        reg[r0 as usize] = reg[r1 as usize] & reg[r2 as usize];
+    }
+
+    update_flags(&mut reg, r0);
+}
+
+// # Assembler formats
+//
+// NOT DR, SR
+//
+// # Examples
+//
+// NOT R4, R2 ; R4 <- NOT(R2)
+//
+// # Encodings
+//
+// 1001 xxx xxx 1 11111
+// NOT  DR  SR1
+fn do_not(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
+    let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
+
+    reg[r0 as usize] = !reg[r1 as usize];
+
     update_flags(&mut reg, r0);
 }
