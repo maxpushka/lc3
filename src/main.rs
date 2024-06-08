@@ -26,7 +26,7 @@ fn main() {
             OP::JSR => do_jsr(instr, &mut reg),
             OP::AND => do_and(instr, &mut reg),
             OP::LDR => do_ldr(instr, &mut reg),
-            OP::STR => todo!(),
+            OP::STR => do_str(instr, &mut reg),
             OP::RTI => return, // not simulated
             OP::NOT => do_not(instr, &mut reg),
             OP::LDI => do_ldi(instr, &mut reg),
@@ -366,7 +366,7 @@ fn do_ld(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
 // # Encodings
 //
 // 0110 xxx xxx   xxxxxx
-//      DR  BaseR PCoffset6
+//      DR  BaseR offset6
 fn do_ldr(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let r0: u16 = (instr >> 9) & 0x7; // DR
     let r1: u16 = (instr >> 6) & 0x7; // BaseR
@@ -434,6 +434,28 @@ fn do_sti(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
     let address = mem_read(R::PC as u16 + pc_offset);
+    let value = reg[r0 as usize];
+    mem_write(reg, address, value);
+}
+
+// # Assembler formats
+//
+// STR SR, BaseR, offset6
+//
+// # Examples
+//
+// STR R4, R2, #5 ; mem[R2 + 5] <- R4
+//
+// # Encodings
+//
+// 0111 xxx xxx   xxxxxx
+//      SR  BaseR offset6
+fn do_str(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let r0: u16 = (instr >> 9) & 0x7;
+    let r1: u16 = (instr >> 6) & 0x7;
+    let offset = sign_extend(instr & 0x3F, 6); // offset6
+
+    let address = reg[r1 as usize] + offset;
     let value = reg[r0 as usize];
     mem_write(reg, address, value);
 }
