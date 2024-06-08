@@ -31,7 +31,7 @@ fn main() {
             OP::NOT => do_not(instr, &mut reg),
             OP::LDI => do_ldi(instr, &mut reg),
             OP::STI => todo!(),
-            OP::JMP => todo!(),
+            OP::JMP => do_jmp(instr, &mut reg),
             OP::RES => todo!(),
             OP::LEA => todo!(),
             OP::TRAP => todo!(),
@@ -74,7 +74,7 @@ enum OP {
     NOT,    /* bitwise not */
     LDI,    /* load indirect */
     STI,    /* store indirect */
-    JMP,    /* jump */
+    JMP,    /* jump (return from subroutine) */
     RES,    /* reserved (unused) */
     LEA,    /* load effective address */
     TRAP,   /* execute trap */
@@ -275,4 +275,25 @@ fn do_br(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
     if cond_flag & reg[R::COND as usize] != 0 {
         reg[R::COUNT as usize] += pc_offset;
     }
+}
+
+// # Assembler formats
+//
+// JMP BaseR
+// RET
+//
+// # Examples
+//
+// JMP R2 ; PC <- R2
+// RET    ; PC <- R7
+//
+// # Encodings
+//
+// JMP: 1100 000 xxx   000000
+//               BaseR
+//
+// RET: 1100 000 111   000000
+fn do_jmp(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+    let r1 = (instr >> 6) & 0x7;
+    reg[R::PC as usize] = reg[r1 as usize];
 }
