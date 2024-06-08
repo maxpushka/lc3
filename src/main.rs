@@ -23,7 +23,7 @@ fn main() {
             OP::ADD => do_add(instr, &mut reg),
             OP::LD => todo!(),
             OP::ST => todo!(),
-            OP::JSR => todo!(),
+            OP::JSR => do_jsr(instr, &mut reg),
             OP::AND => do_and(instr, &mut reg),
             OP::LDR => todo!(),
             OP::STR => todo!(),
@@ -45,6 +45,7 @@ const MEMORY_MAX: usize = 1 << 16;
 
 // Registers
 #[repr(usize)]
+// #[allow(dead_code)]
 enum R {
     R0 = 0,
     R1,
@@ -158,7 +159,7 @@ fn sign_extend(mut x: u16, bit_count: i32) -> u16 {
 fn do_add(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
     let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
     let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
-    let imm_flag: u16 = (instr >> 5) & 0x1; // whether we are in immediate mode
+    let imm_flag: u16 = (instr >> 5) & 1; // whether we are in immediate mode
 
     if imm_flag != 0 {
         let imm5: u16 = sign_extend(instr & 0x1F, 5);
@@ -214,7 +215,7 @@ fn do_ldi(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
 fn do_and(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
     let r0: u16 = (instr >> 9) & 0x7; // destination register (DR)
     let r1: u16 = (instr >> 6) & 0x7; // first operand (SR1)
-    let imm_flag: u16 = (instr >> 5) & 0x1; // whether we are in immediate mode
+    let imm_flag: u16 = (instr >> 5) & 1; // whether we are in immediate mode
 
     if imm_flag != 0 {
         let imm5: u16 = sign_extend(instr & 0x1F, 5);
@@ -268,12 +269,12 @@ fn do_not(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
 //
 // 0000 x x x xxxxxxxxx
 // BR   n z p PCoffset9
-fn do_br(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+fn do_br(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let cond_flag: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
     if cond_flag & reg[R::COND as usize] != 0 {
-        reg[R::COUNT as usize] += pc_offset;
+        reg[R::PC as usize] += pc_offset;
     }
 }
 
@@ -293,7 +294,41 @@ fn do_br(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
 //               BaseR
 //
 // RET: 1100 000 111   000000
-fn do_jmp(instr: u16, mut reg: &mut [u16; R::COUNT as usize]) {
+fn do_jmp(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
     let r1 = (instr >> 6) & 0x7;
     reg[R::PC as usize] = reg[r1 as usize];
+}
+
+// # Assembler formats
+//
+// JSR  LABEL
+// JSRR BaseR
+//
+// # Examples
+//
+// JSR  QUEUE ; Put the address of the instruction following JSR into R7;
+//            ; Jump to QUEUE
+// JSRR R3    ; Put the address following JSRR into R7;
+//            ; Jump to the address contained in R3
+//
+// # Encodings
+//
+// JSR:  0100 1 xxxxxxxxxxx
+//              PCoffset11
+//
+// JSRR: 0100 0 00 xxx   000000
+//                 BaseR
+fn do_jsr(instr: u16, reg: &mut [u16; R::COUNT as usize]) {
+    let long_flag: u16 = (instr >> 11) & 1;
+    reg[R::R7 as usize] = reg[R::PC as usize];
+
+    if long_flag != 0 {
+        /* JSR */
+        let long_pc_offset = sign_extend(instr & 0x7FF, 11); // PCoffset11
+        reg[R::PC as usize] += long_pc_offset;
+    } else {
+        /* JSRR */
+        let r1: u16 = (instr >> 6) & 0x7;
+        reg[R::PC as usize] = reg[r1 as usize];
+    }
 }
