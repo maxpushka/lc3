@@ -361,8 +361,7 @@ pub fn do_trap(instr: u16, state: &mut State) {
             state.reg.update_flags(R::R0 as u16);
         }
         TRAP::OUT => {
-            let c = state.reg[R::R0] as u32;
-            let c = char::from_u32(c).unwrap();
+            let c = state.reg[R::R0] as u8 as char;
             print!("{}", c);
             std::io::stdout().flush().unwrap();
         }
@@ -391,7 +390,28 @@ pub fn do_trap(instr: u16, state: &mut State) {
                 state.reg.update_flags(R::R0 as u16);
             }
         }
-        TRAP::PUTSP => todo!(),
-        TRAP::HALT => todo!(),
+        TRAP::PUTSP => {
+            /* one char per byte (two bytes per word)
+            here we need to swap back to
+            big endian format */
+            // uint16_t* c = memory + reg[R_R0];
+            let mut c = state.reg[R::R0];
+            while state.mem.read(c) != 0 {
+                let char1 = (state.mem.read(c) & 0xFF) as u8 as char;
+                print!("{}", char1);
+
+                let char2 = (state.mem.read(c) >> 8) as u8 as char;
+                print!("{}", char2);
+
+                c += 1;
+            }
+
+            std::io::stdout().flush().unwrap();
+        }
+        TRAP::HALT => {
+            println!("HALT");
+            std::io::stdout().flush().unwrap();
+            state.running = false;
+        }
     };
 }

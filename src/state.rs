@@ -5,6 +5,7 @@ use crate::defs::{FL, R};
 pub struct State {
     pub reg: Registers,
     pub mem: Memory,
+    pub running: bool,
 }
 
 impl State {
@@ -12,6 +13,7 @@ impl State {
         Self {
             reg: Registers::new(),
             mem: Memory::new(),
+            running: false,
         }
     }
 }
