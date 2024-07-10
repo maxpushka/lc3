@@ -31,7 +31,7 @@ fn main() {
     // Restore buffering on drop.
     let _ = InputBuffering::disable();
 
-    loop {
+    while state.running {
         let instr = state.mem.read(state.reg[R::PC]);
         state.reg[R::PC] += 1;
 

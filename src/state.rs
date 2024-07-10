@@ -19,7 +19,7 @@ impl State {
         Self {
             reg: Registers::new(),
             mem: Memory::new(),
-            running: false,
+            running: true,
         }
     }
 }
