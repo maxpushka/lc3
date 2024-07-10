@@ -37,10 +37,10 @@ pub fn do_add(instr: u16, state: &mut State) {
 
     if imm_flag != 0 {
         let imm5: u16 = sign_extend(instr & 0x1F, 5);
-        state.reg[r0] = state.reg[r1] + imm5;
+        state.reg[r0] = state.reg[r1].wrapping_add(imm5);
     } else {
         let r2: u16 = instr & 0x7;
-        state.reg[r0] = state.reg[r1] + state.reg[r2];
+        state.reg[r0] = state.reg[r1].wrapping_add(state.reg[r2]);
     }
 
     state.reg.update_flags(r0);
@@ -64,7 +64,7 @@ pub fn do_ldi(instr: u16, state: &mut State) {
 
     // add pc_offset to the current PC, look at that memory location to get the final address
     let pc = state.mem.read(state.reg[R::PC]);
-    state.reg[r0] = state.mem.read(pc + pc_offset);
+    state.reg[r0] = state.mem.read(pc.wrapping_add(pc_offset));
     state.reg.update_flags(r0);
 }
 
@@ -149,7 +149,7 @@ pub fn do_br(instr: u16, state: &mut State) {
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
     if cond_flag & state.reg[R::COND] != 0 {
-        state.reg[R::PC] += pc_offset;
+        state.reg[R::PC] = state.reg[R::PC].wrapping_add(pc_offset);
     }
 }
 
@@ -200,7 +200,7 @@ pub fn do_jsr(instr: u16, state: &mut State) {
     if long_flag != 0 {
         /* JSR */
         let long_pc_offset = sign_extend(instr & 0x7FF, 11); // PCoffset11
-        state.reg[R::PC] += long_pc_offset;
+        state.reg[R::PC] = state.reg[R::PC].wrapping_add(long_pc_offset);
     } else {
         /* JSRR */
         let r1: u16 = (instr >> 6) & 0x7;
@@ -224,7 +224,7 @@ pub fn do_ld(instr: u16, state: &mut State) {
     let r0: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
-    state.reg[r0] = state.mem.read(state.reg[R::PC] + pc_offset);
+    state.reg[r0] = state.mem.read(state.reg[R::PC].wrapping_add(pc_offset));
     state.reg.update_flags(r0);
 }
 
@@ -245,7 +245,7 @@ pub fn do_ldr(instr: u16, state: &mut State) {
     let r1: u16 = (instr >> 6) & 0x7; // BaseR
     let offset = sign_extend(instr & 0x3F, 6); // offset6
 
-    state.reg[r0] = state.mem.read(state.reg[r1] + offset);
+    state.reg[r0] = state.mem.read(state.reg[r1].wrapping_add(offset));
     state.reg.update_flags(r0);
 }
 
@@ -265,7 +265,7 @@ pub fn do_lea(instr: u16, state: &mut State) {
     let r0: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
-    state.reg[r0] = state.reg[R::PC] + pc_offset;
+    state.reg[r0] = state.reg[R::PC].wrapping_add(pc_offset);
     state.reg.update_flags(r0);
 }
 
@@ -285,7 +285,7 @@ pub fn do_st(instr: u16, state: &mut State) {
     let r0: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
-    let address = R::PC as u16 + pc_offset;
+    let address = (R::PC as u16).wrapping_add(pc_offset);
     let value = state.reg[r0];
     state.mem.write(address, value);
 }
@@ -306,7 +306,7 @@ pub fn do_sti(instr: u16, state: &mut State) {
     let r0: u16 = (instr >> 9) & 0x7;
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
-    let address = state.mem.read(R::PC as u16 + pc_offset);
+    let address = state.mem.read((R::PC as u16).wrapping_add(pc_offset));
     let value = state.reg[r0];
     state.mem.write(address, value);
 }
@@ -328,7 +328,7 @@ pub fn do_str(instr: u16, state: &mut State) {
     let r1: u16 = (instr >> 6) & 0x7;
     let offset = sign_extend(instr & 0x3F, 6); // offset6
 
-    let address = state.reg[r1] + offset;
+    let address = state.reg[r1].wrapping_add(offset);
     let value = state.reg[r0];
     state.mem.write(address, value);
 }
@@ -374,7 +374,7 @@ pub fn do_trap(instr: u16, state: &mut State) {
                     break;
                 }
                 print!("{}", c as char);
-                address += 1;
+                address = address.wrapping_add(1);
             }
         }
         TRAP::IN => {
@@ -395,7 +395,6 @@ pub fn do_trap(instr: u16, state: &mut State) {
             /* one char per byte (two bytes per word)
             here we need to swap back to
             big endian format */
-            // uint16_t* c = memory + reg[R_R0];
             let mut c = state.reg[R::R0];
             while state.mem.read(c) != 0 {
                 let char1 = (state.mem.read(c) & 0xFF) as u8 as char;
@@ -404,7 +403,7 @@ pub fn do_trap(instr: u16, state: &mut State) {
                 let char2 = (state.mem.read(c) >> 8) as u8 as char;
                 print!("{}", char2);
 
-                c += 1;
+                c = c.wrapping_add(1);
             }
 
             std::io::stdout().flush().unwrap();

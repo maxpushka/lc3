@@ -33,7 +33,7 @@ fn main() {
 
     while state.running {
         let instr = state.mem.read(state.reg[R::PC]);
-        state.reg[R::PC] += 1;
+        state.reg[R::PC] = state.reg[R::PC].wrapping_add(1);
 
         let op = instr >> 12;
         match OP::try_from(op).expect("unknown opcode") {
@@ -70,7 +70,7 @@ fn read_image_file(path: &String, state: &mut State) -> io::Result<()> {
     while let Ok(_) = file.read_exact(&mut buffer) {
         let read = swap16(u16::from_ne_bytes(buffer));
         state.mem.write(address, read);
-        address += 1;
+        address = address.wrapping_add(1);
     }
 
     Ok(())
