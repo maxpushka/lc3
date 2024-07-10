@@ -1,15 +1,35 @@
+use std::{
+    fs::File,
+    io::{self, Read},
+};
+
 use defs::{OP, R};
 use state::State;
+use terminal::InputBuffering;
 
 mod defs;
 mod instr;
 mod state;
+mod terminal;
 
 fn main() {
-    // @{Load Arguments}
-    // @{Setup}
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        /* show usage string */
+        println!("lc3 [image-file1] ...");
+        return;
+    }
 
     let mut state = State::new();
+    for image in args {
+        if let Err(e) = read_image_file(&image, &mut state) {
+            println!("failed to load image: {}", e);
+        }
+    }
+
+    // Disable input buffering.
+    // Restore buffering on drop.
+    let _ = InputBuffering::disable();
 
     loop {
         let instr = state.mem.read(state.reg[R::PC]);
@@ -35,6 +55,23 @@ fn main() {
             OP::TRAP => instr::do_trap(instr, &mut state),
         }
     }
+}
 
-    // @{Shutdown}
+fn read_image_file(path: &String, state: &mut State) -> io::Result<()> {
+    let mut file = File::open(path)?;
+    let mut buffer = [0u8; std::mem::size_of::<u16>()];
+
+    /* the origin tells us where in memory to place the image */
+    file.read_exact(&mut buffer)?;
+    let origin = u16::from_le_bytes(buffer);
+
+    /* read the rest of the file */
+    let mut address = origin;
+    while let Ok(_) = file.read_exact(&mut buffer) {
+        let read = u16::from_le_bytes(buffer);
+        state.mem.write(address, read);
+        address += 1;
+    }
+
+    Ok(())
 }

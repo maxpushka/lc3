@@ -1,6 +1,12 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    io::Read,
+    ops::{Index, IndexMut},
+};
 
-use crate::defs::{FL, R};
+use crate::{
+    defs::{FL, MR, R},
+    terminal::check_key,
+};
 
 pub struct State {
     pub reg: Registers,
@@ -76,7 +82,7 @@ impl IndexMut<u16> for Registers {
     }
 }
 
-const MEMORY_MAX: usize = 1 << 16;
+pub const MEMORY_MAX: usize = 1 << 16;
 
 pub struct Memory {
     data: [u16; MEMORY_MAX],
@@ -89,11 +95,22 @@ impl Memory {
         }
     }
 
-    pub fn read(&self, address: u16) -> u16 {
-        0 // TODO
+    pub fn read(&mut self, address: u16) -> u16 {
+        if address == MR::KBSR as u16 {
+            if check_key().unwrap() {
+                self.data[MR::KBSR as usize] = 1 << 15;
+
+                let mut buffer = [0u8; 1];
+                std::io::stdin().read_exact(&mut buffer).unwrap();
+                self.data[MR::KBDR as usize] = buffer[0] as u16;
+            } else {
+                self.data[MR::KBSR as usize] = 0;
+            }
+        }
+        self.data[address as usize]
     }
 
     pub fn write(&mut self, address: u16, value: u16) {
-        // TODO
+        self.data[address as usize] = value;
     }
 }

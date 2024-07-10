@@ -63,7 +63,8 @@ pub fn do_ldi(instr: u16, state: &mut State) {
     let pc_offset = sign_extend(instr & 0x1FF, 9); // PCoffset9
 
     // add pc_offset to the current PC, look at that memory location to get the final address
-    state.reg[r0] = state.mem.read(state.mem.read(state.reg[R::PC]) + pc_offset);
+    let pc = state.mem.read(state.reg[R::PC]);
+    state.reg[r0] = state.mem.read(pc + pc_offset);
     state.reg.update_flags(r0);
 }
 

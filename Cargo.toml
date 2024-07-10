@@ -5,3 +5,7 @@ edition = "2021"
 
 [profile.release]
 lto = true
+
+[dependencies]
+mio = { version = "1.0.0", features = ["os-ext", "os-poll"] }
+termios = "0.3.3"

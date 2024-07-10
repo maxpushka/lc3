@@ -96,3 +96,10 @@ pub enum FL {
     ZRO = 1 << 1, /* Z */
     NEG = 1 << 2, /* N */
 }
+
+// Memory-mapped registers
+#[repr(u16)]
+pub enum MR {
+    KBSR = 0xFE00, /* keyboard status */
+    KBDR = 0xFE02, /* keyboard data */
+}
