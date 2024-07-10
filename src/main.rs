@@ -63,15 +63,19 @@ fn read_image_file(path: &String, state: &mut State) -> io::Result<()> {
 
     /* the origin tells us where in memory to place the image */
     file.read_exact(&mut buffer)?;
-    let origin = u16::from_le_bytes(buffer);
+    let origin = swap16(u16::from_ne_bytes(buffer));
 
     /* read the rest of the file */
     let mut address = origin;
     while let Ok(_) = file.read_exact(&mut buffer) {
-        let read = u16::from_le_bytes(buffer);
+        let read = swap16(u16::from_ne_bytes(buffer));
         state.mem.write(address, read);
         address += 1;
     }
 
     Ok(())
+}
+
+fn swap16(x: u16) -> u16 {
+    x << 8 | x >> 8
 }

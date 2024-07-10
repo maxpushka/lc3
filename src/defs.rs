@@ -1,6 +1,7 @@
 // Registers
 #[repr(usize)]
 #[allow(dead_code)]
+// Registers
 pub enum R {
     R0 = 0,
     R1,
@@ -17,6 +18,7 @@ pub enum R {
 
 // Opcodes
 #[repr(u16)]
+// Operations
 pub enum OP {
     BR = 0, /* branch */
     ADD,    /* add  */
