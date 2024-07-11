@@ -243,9 +243,9 @@ pub fn do_ld(instr: u16, state: &mut State) {
 pub fn do_ldr(instr: u16, state: &mut State) {
     let r0: u16 = (instr >> 9) & 0x7; // DR
     let r1: u16 = (instr >> 6) & 0x7; // BaseR
-    let offset = sign_extend(instr & 0x3F, 6); // offset6
+    let offset6 = sign_extend(instr & 0x3F, 6);
 
-    state.reg[r0] = state.mem.read(state.reg[r1].wrapping_add(offset));
+    state.reg[r0] = state.mem.read(state.reg[r1].wrapping_add(offset6));
     state.reg.update_flags(r0);
 }
 

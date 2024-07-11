@@ -24,6 +24,8 @@ impl State {
     }
 }
 
+const PC_START: u16 = 0x3000;
+
 pub struct Registers {
     reg: [u16; R::COUNT as usize],
 }
@@ -39,7 +41,6 @@ impl Registers {
 
         // set the PC to starting position
         // 0x3000 is the default
-        const PC_START: u16 = 0x3000;
         state.reg[R::PC as usize] = PC_START;
         state
     }
@@ -53,6 +54,20 @@ impl Registers {
         } else {
             self.reg[R::COND as usize] = FL::POS as u16;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        defs::R,
+        state::{Registers, PC_START},
+    };
+
+    #[test]
+    fn program_counter_init_value() {
+        let reg = Registers::new();
+        assert_eq!(PC_START, reg[R::PC]);
     }
 }
 
